@@ -1,9 +1,8 @@
 <?php
 /**
- * Copyright © Magento, Inc. All rights reserved.
- * See COPYING.txt for license details.
+ * Copyright 2019 Adobe
+ * All Rights Reserved.
  */
-
 declare(strict_types=1);
 
 namespace Magento\PageBuilder\Model;
@@ -14,6 +13,7 @@ use Magento\Framework\Exception\CouldNotDeleteException;
 use Magento\Framework\Exception\CouldNotSaveException;
 use Magento\Framework\Exception\NoSuchEntityException;
 use Magento\Framework\Filesystem;
+use Magento\Framework\Image\Factory;
 use Magento\PageBuilder\Api\Data\TemplateInterface;
 use Magento\PageBuilder\Api\Data\TemplateSearchResultsInterfaceFactory;
 use Magento\PageBuilder\Api\TemplateRepositoryInterface;
@@ -71,6 +71,7 @@ class TemplateRepository implements TemplateRepositoryInterface
      * @param CollectionProcessorInterface $collectionProcessor
      * @param Filesystem $filesystem
      * @param Database $mediaStorage
+     * @param Factory $imageFactory
      */
     public function __construct(
         ResourceTemplate $resource,
@@ -79,7 +80,8 @@ class TemplateRepository implements TemplateRepositoryInterface
         TemplateSearchResultsInterfaceFactory $searchResultsFactory,
         CollectionProcessorInterface $collectionProcessor,
         Filesystem $filesystem,
-        Database $mediaStorage
+        Database $mediaStorage,
+        private readonly Factory $imageFactory
     ) {
         $this->resource = $resource;
         $this->templateFactory = $templateFactory;
@@ -152,10 +154,15 @@ class TemplateRepository implements TemplateRepositoryInterface
             $previewImage = $template->getPreviewImage();
             $previewThumbImage = $templateModel->getPreviewThumbnailImage();
 
+            $this->imageFactory->create($mediaDir->getAbsolutePath().$previewImage);
+
             // Remove the preview image from the media directory
             if ($mediaDir->isExist($previewImage)) {
                 $mediaDir->delete($previewImage);
             }
+
+            $this->imageFactory->create($mediaDir->getAbsolutePath().$previewThumbImage);
+
             if ($mediaDir->isExist($previewThumbImage)) {
                 $mediaDir->delete($previewThumbImage);
             }
