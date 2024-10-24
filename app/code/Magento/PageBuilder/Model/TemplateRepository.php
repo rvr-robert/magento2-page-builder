@@ -9,8 +9,10 @@ namespace Magento\PageBuilder\Model;
 
 use Magento\Framework\Api\SearchCriteria\CollectionProcessorInterface;
 use Magento\Framework\Api\SearchCriteriaInterface;
+use Magento\Framework\App\Filesystem\DirectoryList;
 use Magento\Framework\Exception\CouldNotDeleteException;
 use Magento\Framework\Exception\CouldNotSaveException;
+use Magento\Framework\Exception\FileSystemException;
 use Magento\Framework\Exception\NoSuchEntityException;
 use Magento\Framework\Filesystem;
 use Magento\Framework\Image\Factory;
@@ -144,30 +146,14 @@ class TemplateRepository implements TemplateRepositoryInterface
      */
     public function delete(TemplateInterface $template) : bool
     {
-        $mediaDir = $this->filesystem
-            ->getDirectoryWrite(\Magento\Framework\App\Filesystem\DirectoryList::MEDIA);
-
         try {
             $templateModel = $this->templateFactory->create();
             $this->resource->load($templateModel, $template->getTemplateId());
             $this->resource->delete($templateModel);
             $previewImage = $template->getPreviewImage();
             $previewThumbImage = $templateModel->getPreviewThumbnailImage();
-
-            $this->imageFactory->create($mediaDir->getAbsolutePath().$previewImage);
-
-            // Remove the preview image from the media directory
-            if ($mediaDir->isExist($previewImage)) {
-                $mediaDir->delete($previewImage);
-            }
-
-            $this->imageFactory->create($mediaDir->getAbsolutePath().$previewThumbImage);
-
-            if ($mediaDir->isExist($previewThumbImage)) {
-                $mediaDir->delete($previewThumbImage);
-            }
-            $this->mediaStorage->deleteFile($previewImage);
-            $this->mediaStorage->deleteFile($previewThumbImage);
+            $this->deletePreviewImage($previewImage);
+            $this->deletePreviewImage($previewThumbImage);
         } catch (\Exception $exception) {
             throw new CouldNotDeleteException(
                 __('Could not delete the Template: %1', $exception->getMessage())
@@ -175,6 +161,32 @@ class TemplateRepository implements TemplateRepositoryInterface
         }
 
         return true;
+    }
+
+    /**
+     * Checks if preview image is valid and tries to delete it
+     *
+     * @param string $imageName
+     * @return void
+     * @throws FileSystemException
+     */
+    private function deletePreviewImage(string $imageName): void
+    {
+        $isValid = true;
+        $mediaDir = $this->filesystem
+            ->getDirectoryWrite(DirectoryList::MEDIA);
+
+        try {
+            $this->imageFactory->create($mediaDir->getAbsolutePath().$imageName);
+        } catch (\Exception) {
+            $isValid = false;
+        }
+
+        if ($mediaDir->isExist($imageName) && $isValid) {
+            $mediaDir->delete($imageName);
+        }
+
+        $this->mediaStorage->deleteFile($imageName);
     }
 
     /**
