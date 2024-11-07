@@ -5,7 +5,7 @@
  */
 declare(strict_types=1);
 
-namespace Magento\PageBuilder\Test\Unit\Model;
+namespace Magento\PageBuilder\Test\Unit\Model\Wysiwyg;
 
 use Magento\PageBuilder\Model\Wysiwyg\DefaultConfigProvider;
 use Magento\Framework\DataObject;
